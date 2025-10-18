@@ -2,7 +2,6 @@
 from dotenv import load_dotenv
 import logging, sys, time, os, requests, pprint
 from telebot import TeleBot
-from datetime import datetime as dt
 
 
 load_dotenv('.env')
@@ -16,15 +15,14 @@ logging.basicConfig(
 )
 
 
-PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
-TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+PRACTICUM_TOKEN = os.getenv('yaTOKEN')
+TELEGRAM_TOKEN = os.getenv('tgbTOKEN')
+TELEGRAM_CHAT_ID = os.getenv('idTOKEN')
 
 
 RETRY_PERIOD = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
-params={'from_date': dt.timestamp}
 
 
 HOMEWORK_VERDICTS = {
@@ -69,6 +67,8 @@ def send_message(bot, message):
 def get_api_answer(timestamp):
     """Делает запрос к API Практикума."""
     try:
+        params = {'from_date': timestamp}
+        
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
         if response.status_code != 200:
             logging.error(f'Эндпоинт {ENDPOINT} недоступен. Код ответа: {response.status_code}')
@@ -120,10 +120,10 @@ def main():
         logging.critical('Отсутствуют обязательные переменные окружения')
         raise SystemExit('Программа принудительно остановлена')
         
-    timestamp = int(time.time())
-    logging.info('Бот запущен')
-
     bot = TeleBot(token=TELEGRAM_TOKEN)
+    timestamp = int(time.time())
+    last_error = None
+    logging.info('Бот запущен')
     
     while True:
         try:
