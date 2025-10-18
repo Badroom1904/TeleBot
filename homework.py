@@ -114,7 +114,7 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
-    if check_tokens() == False:
+    if check_tokens() is False:
         logging.critical('Отсутствуют обязательные переменные окружения')
         raise SystemExit('Программа принудительно остановлена')
 
