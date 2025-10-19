@@ -5,17 +5,26 @@ import os
 import requests
 from telebot import TeleBot
 from dotenv import load_dotenv
+from http import HTTPStatus
+from exceptions import (APIRequestError,
+                        InvalidAPIResponseError,
+                        TelegramSendMessageError)
 
 
 load_dotenv('.env')
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logger.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter(
+        '%(asctime)s [%(levelname)s] %(name)s.%(funcName)s:%(lineno)d - '
+        '%(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 
 PRACTICUM_TOKEN = os.getenv('yaTOKEN')
@@ -45,7 +54,8 @@ def check_tokens():
     missing_tokens = []
     for token_name, token_value in tokens.items():
         if not token_value:
-            logging.critical('Отсутствует обязательная переменная: %s')
+            logging.critical(
+                f'Отсутствует обязательная переменная:{token_name}')
             missing_tokens.append(token_name)
 
     if missing_tokens:
@@ -61,7 +71,9 @@ def send_message(bot, message):
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.debug('Сообщение отправлено в Telegram')
     except TeleBot.apihelper.ApiException as error:
-        logging.error(f'Ошибка отправки в Telegram: {error}')
+        logging.error(f'Ошибка отправки в Telegram (API): {error}')
+    except TelegramSendMessageError as error:
+        logging.error(f'Ошибка отправки в Telegram (сеть): {error}')
 
 
 def get_api_answer(timestamp):
@@ -70,12 +82,13 @@ def get_api_answer(timestamp):
         params = {'from_date': timestamp}
 
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-        if response.status_code != 200:
+        if response.status_code != HTTPStatus.OK:
             logging.error('Эндпоинт %s недоступен. Код ответа: %s')
-            raise Exception('API недоступен. Код: %s')
+            raise APIRequestError('API недоступен. Код: %s')
         return response.json()
     except requests.RequestException as error:
         logging.error(f'Ошибка при запросе к API:{error}')
+        raise InvalidAPIResponseError('Ошибка при запросе к API')
 
 
 def check_response(response):
